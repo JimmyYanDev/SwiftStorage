@@ -30,6 +30,7 @@ import com.xiandian.openstack.cloud.swiftstorage.base.TaskResult;
 import com.xiandian.openstack.cloud.swiftstorage.fs.SFile;
 import com.xiandian.openstack.cloud.swiftstorage.sdk.service.OpenStackClientService;
 import com.xiandian.openstack.cloud.swiftstorage.utils.FileIconHelper;
+import com.xiandian.openstack.cloud.swiftstorage.utils.HttpUtils;
 import com.xiandian.openstack.cloud.swiftstorage.utils.PromptDialogUtil;
 
 import java.text.SimpleDateFormat;
@@ -245,7 +246,6 @@ public class MainFragment extends Fragment
      */
     private void fillListView() {
         setFileListData();
-
         fileListViewAdapter.notifyDataSetChanged();
         if (getAppState().getSelectedDirectory() != null) {
             //调用MainActivity改变Toolbar的路径信息
@@ -316,6 +316,9 @@ public class MainFragment extends Fragment
                 //1 Icon 2 name 3 time 4 size 5 folder 6 index 7  checked
                 //目前采用默认图标
                 if (file.getContentType().contains("image")) {
+                    String fileName = file.getName();
+                    // 异步下载图片到本地
+                    HttpUtils.downloadFromSwfit(fileName, filePath, fileListViewAdapter, getActivity());
                     Bitmap bitmap = fileIconHelper.getImageThumbnail(filePath);
                     if (bitmap != null) {
                         fileData.setImage(bitmap);
@@ -324,6 +327,9 @@ public class MainFragment extends Fragment
                     }
 
                 } else if (file.getContentType().contains("video")) {
+                    String fileName = file.getName();
+                    // 异步下载图片到本地
+                    HttpUtils.downloadFromSwfit(fileName, filePath, fileListViewAdapter, getActivity());
                     Bitmap bitmap = fileIconHelper.getVideoThumbnail(filePath);
                     if (bitmap != null) {
                         fileData.setImage(bitmap);

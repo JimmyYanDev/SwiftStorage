@@ -2,6 +2,7 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
+      <module fileurl="file://$PROJECT_DIR$/SwiftStorage.iml" filepath="$PROJECT_DIR$/SwiftStorage.iml" />
       <module fileurl="file://$PROJECT_DIR$/app/app.iml" filepath="$PROJECT_DIR$/app/app.iml" />
       <module fileurl="file://$PROJECT_DIR$/openstack-java-jdk/openstack-java-jdk.iml" filepath="$PROJECT_DIR$/openstack-java-jdk/openstack-java-jdk.iml" />
       <module fileurl="file://$PROJECT_DIR$/swiftst.iml" filepath="$PROJECT_DIR$/swiftst.iml" />

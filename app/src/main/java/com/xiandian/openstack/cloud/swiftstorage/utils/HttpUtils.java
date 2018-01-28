@@ -48,7 +48,6 @@ public class HttpUtils {
                     while ((hasRead = bis.read(buffer)) > 0) {
                         fos.write(buffer, 0, hasRead);
                     }
-                    fos.flush();
                     fos.close();
                     bis.close();
                     return new TaskResult<java.lang.Object>(null);

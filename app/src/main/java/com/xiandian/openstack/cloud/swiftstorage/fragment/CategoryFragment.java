@@ -48,7 +48,7 @@ public class CategoryFragment extends Fragment implements SwipeRefreshLayout.OnR
 
 
     //Log 信息标签。
-    private String TAG = MainFragment.class.getSimpleName();
+    private String TAG = CategoryFragment.class.getSimpleName();
     //Context
     private Context context;
 
@@ -295,6 +295,8 @@ public class CategoryFragment extends Fragment implements SwipeRefreshLayout.OnR
                     break;
                 }
             }
+            Log.d(TAG, "type: " + type);
+            Log.d(TAG, "flag: " + flag);
             if (flag) {
                 swiftFiles.add(sFile);
             }

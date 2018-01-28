@@ -19,6 +19,7 @@ import android.widget.Button;
 import android.widget.LinearLayout;
 import android.widget.ListView;
 import android.widget.ProgressBar;
+import android.widget.Toast;
 
 import com.woorea.openstack.swift.model.Object;
 import com.woorea.openstack.swift.model.Objects;
@@ -126,7 +127,77 @@ public class MainFragment extends Fragment
         btnConfirm.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-
+                if (ismove) {
+                    moveToFileName = getAppState().getSelectedDirectory().getName() + cleanName(moveFileName);
+                    Log.d(TAG, "moveFileName: " + moveFileName);
+                    Log.d(TAG, "moveToFileName: " + moveToFileName);
+                    Log.d(TAG, "moveFileType: " + moveFileType);
+                    new Thread(new Runnable() {
+                        @Override
+                        public void run() {
+                            try {
+                                getService().move(getAppState().getSelectedContainer().getName(), moveFileName,moveToFileName, moveFileType);
+                                getActivity().runOnUiThread(new Runnable() {
+                                    @Override
+                                    public void run() {
+                                        Toast.makeText(getActivity(), "移动成功", Toast.LENGTH_SHORT).show();
+                                    }
+                                });
+                            } catch (Exception e) {
+                                getActivity().runOnUiThread(new Runnable() {
+                                    @Override
+                                    public void run() {
+                                        Toast.makeText(getActivity(), "移动失败", Toast.LENGTH_SHORT).show();
+                                    }
+                                });
+                                e.printStackTrace();
+                            }
+                            getActivity().runOnUiThread(new Runnable() {
+                                @Override
+                                public void run() {
+                                    onRefresh();
+                                }
+                            });
+                        }
+                    }).start();
+                    ismove=false;
+                }
+                if (iscopy) {
+                    copyToFileName = getAppState().getSelectedDirectory().getName() + cleanName(copyFileName);
+                    Log.d(TAG, "copyFileName: " + copyFileName);
+                    Log.d(TAG, "copyToFileName: " + copyToFileName);
+                    Log.d(TAG, "copyFileType: " + copyFileType);
+                    new Thread(new Runnable() {
+                        @Override
+                        public void run() {
+                            try {
+                                getService().copy(getAppState().getSelectedContainer().getName(), copyFileName,copyToFileName, copyFileType);
+                                getActivity().runOnUiThread(new Runnable() {
+                                    @Override
+                                    public void run() {
+                                        Toast.makeText(getActivity(), "复制成功", Toast.LENGTH_SHORT).show();
+                                    }
+                                });
+                            } catch (Exception e) {
+                                getActivity().runOnUiThread(new Runnable() {
+                                    @Override
+                                    public void run() {
+                                        Toast.makeText(getActivity(), "复制失败", Toast.LENGTH_SHORT).show();
+                                    }
+                                });
+                                e.printStackTrace();
+                            }
+                            getActivity().runOnUiThread(new Runnable() {
+                                @Override
+                                public void run() {
+                                    onRefresh();
+                                }
+                            });
+                        }
+                    }).start();
+                    iscopy=false;
+                }
+                fileActionBar.setVisibility(View.GONE);
             }
         });
         btnCancel = (Button) rootView.findViewById(R.id.btnCancel);
@@ -327,9 +398,9 @@ public class MainFragment extends Fragment
                     }
 
                 } else if (file.getContentType().contains("video")) {
-                    String fileName = file.getName();
-                    // 异步下载图片到本地
-                    HttpUtils.downloadFromSwfit(fileName, filePath, fileListViewAdapter, getActivity());
+//                    String fileName = file.getName();
+//                    // 异步下载图片到本地
+//                    HttpUtils.downloadFromSwfit(fileName, filePath, fileListViewAdapter, getActivity());
                     Bitmap bitmap = fileIconHelper.getVideoThumbnail(filePath);
                     if (bitmap != null) {
                         fileData.setImage(bitmap);
@@ -499,7 +570,40 @@ public class MainFragment extends Fragment
 
     @Override
     public void download() {
-
+        final SFile sFile = getFirstSelected();
+        if (sFile!= null) {
+            downLoadFileSize = sFile.getSize();
+            new Thread(new Runnable() {
+                @Override
+                public void run() {
+                    try {
+                        String fileName = sFile.getName();
+                        String filePath = getAppState().getOpenStackLocalPath() + cleanName(fileName);
+                        HttpUtils.downloadFromSwfit(fileName, filePath, fileListViewAdapter, getActivity());
+                        getActivity().runOnUiThread(new Runnable() {
+                            @Override
+                            public void run() {
+                                Toast.makeText(getActivity(), "下载成功", Toast.LENGTH_SHORT).show();
+                            }
+                        });
+                    } catch (Exception e) {
+                        getActivity().runOnUiThread(new Runnable() {
+                            @Override
+                            public void run() {
+                                Toast.makeText(getActivity(), "下载失败", Toast.LENGTH_SHORT).show();
+                            }
+                        });
+                        e.printStackTrace();
+                    }
+                    getActivity().runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            onRefresh();
+                        }
+                    });
+                }
+            }).start();
+        }
     }
 
     @Override
@@ -524,12 +628,24 @@ public class MainFragment extends Fragment
 
     @Override
     public void copy(String fromPath, String toPath) {
-
+        SFile file = getFirstSelectedFile();
+        if (file != null) {
+            copyFileName = file.getName();
+            copyFileType = file.getContentType();
+            iscopy = true;
+            fileActionBar.setVisibility(View.VISIBLE);
+        }
     }
 
     @Override
     public void move(String fromPath, String toPath) {
-
+        SFile file = getFirstSelectedFile();
+        if (file != null) {
+            moveFileName = file.getName();
+            moveFileType = file.getContentType();
+            ismove = true;
+            fileActionBar.setVisibility(View.VISIBLE);
+        }
     }
 
     @Override

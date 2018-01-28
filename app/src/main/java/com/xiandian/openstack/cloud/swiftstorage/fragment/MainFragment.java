@@ -701,6 +701,40 @@ public class MainFragment extends Fragment
 
     @Override
     public void recycle(String filePath) {
+        final SFile sFile = getFirstSelected();
+        if (sFile!= null) {
+            new Thread(new Runnable() {
+                @Override
+                public void run() {
+                    try {
+                        String fileName = sFile.getName();
+                        String fileType = sFile.getContentType();
+                        getService().recycle(getAppState().getSelectedContainer().getName(), fileName, fileType);
+                        HttpUtils.downloadFromSwfit(fileName, fileName, fileListViewAdapter, getActivity());
+                        getActivity().runOnUiThread(new Runnable() {
+                            @Override
+                            public void run() {
+                                Toast.makeText(getActivity(), "删除成功", Toast.LENGTH_SHORT).show();
+                            }
+                        });
+                    } catch (Exception e) {
+                        getActivity().runOnUiThread(new Runnable() {
+                            @Override
+                            public void run() {
+                                Toast.makeText(getActivity(), "删除失败", Toast.LENGTH_SHORT).show();
+                            }
+                        });
+                        e.printStackTrace();
+                    }
+                    getActivity().runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            onRefresh();
+                        }
+                    });
+                }
+            }).start();
+        }
 
     }
 

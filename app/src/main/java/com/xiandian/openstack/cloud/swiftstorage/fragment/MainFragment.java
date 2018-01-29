@@ -472,7 +472,6 @@ public class MainFragment extends Fragment
             getAppState().setSelectedDirectory(swiftFolders.get(position));
             fillListView();
         } else {
-
         }
     }
 
@@ -702,7 +701,17 @@ public class MainFragment extends Fragment
 
     @Override
     public void recordaudio() {
-
+        Intent intent = new Intent(MediaStore.Audio.Media.RECORD_SOUND_ACTION);
+        String directory = getAppState().getOpenStackLocalPath();
+        String fileName = new SimpleDateFormat("yyyyMMddHHmmss").format(new Date()) + ".mp3";
+        File fileOutPath = new File(directory);
+        if (!fileOutPath.exists()) {
+            fileOutPath.mkdirs();
+        }
+        fileOutPath = new File(directory, fileName);
+        Uri uri = Uri.fromFile(fileOutPath);
+        intent.putExtra(MediaStore.EXTRA_OUTPUT, uri);
+        startActivityForResult(intent, RESULT_CAPTURE_RECORDER_SOUND);
     }
 
     @Override

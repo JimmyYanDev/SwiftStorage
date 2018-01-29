@@ -5,10 +5,12 @@ import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.graphics.Bitmap;
+import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Environment;
 import android.os.Handler;
+import android.provider.MediaStore;
 import android.support.v4.app.Fragment;
 import android.support.v4.widget.SwipeRefreshLayout;
 import android.support.v4.widget.SwipeRefreshLayout.OnRefreshListener;
@@ -37,9 +39,11 @@ import com.xiandian.openstack.cloud.swiftstorage.utils.FileIconHelper;
 import com.xiandian.openstack.cloud.swiftstorage.utils.HttpUtils;
 import com.xiandian.openstack.cloud.swiftstorage.utils.PromptDialogUtil;
 
+import java.io.File;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
 
@@ -52,6 +56,10 @@ import java.util.List;
 public class MainFragment extends Fragment
         implements OnRefreshListener, SFileListViewAdapter.ItemClickCallable, SFileEditable {
 
+
+    private static final int RESULT_CAPTURE_IMAGE = 1;// 照相的requestCode
+    private static final int REQUEST_CODE_TAKE_VIDEO = 2;// 摄像的照相的requestCode
+    private static final int RESULT_CAPTURE_RECORDER_SOUND = 3;// 录音的requestCode
 
     //Log 信息标签。
     private String TAG = MainFragment.class.getSimpleName();
@@ -524,13 +532,16 @@ public class MainFragment extends Fragment
     @Override
     public void onActivityResult(int requestCode, int resultCode, Intent data) {
 
-        super.onActivityResult(requestCode, resultCode, data);
         switch (requestCode) {
-
+            case RESULT_CAPTURE_IMAGE:
+                Toast.makeText(getActivity(), "拍摄完成", Toast.LENGTH_SHORT).show();
+                break;
             default:
+                Toast.makeText(getActivity(), "拍摄完成", Toast.LENGTH_SHORT).show();
                 break;
         }
 
+        super.onActivityResult(requestCode, resultCode, data);
     }
 
 
@@ -659,12 +670,34 @@ public class MainFragment extends Fragment
 
     @Override
     public void takePhoto() {
-
+        Intent intent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
+        String directory = getAppState().getOpenStackLocalPath();
+        String fileName = new SimpleDateFormat("yyyyMMddHHmmss").format(new Date()) + ".jpg";
+        File fileOutPath = new File(directory);
+        if (!fileOutPath.exists()) {
+            fileOutPath.mkdirs();
+        }
+        fileOutPath = new File(directory, fileName);
+        Uri uri = Uri.fromFile(fileOutPath);
+        intent.putExtra(MediaStore.EXTRA_OUTPUT, uri);
+        intent.putExtra(MediaStore.EXTRA_VIDEO_QUALITY, 1);
+        startActivityForResult(intent, RESULT_CAPTURE_IMAGE);
     }
 
     @Override
     public void recordvideo() {
-
+        Intent intent = new Intent(MediaStore.ACTION_VIDEO_CAPTURE);
+        String directory = getAppState().getOpenStackLocalPath();
+        String fileName = new SimpleDateFormat("yyyyMMddHHmmss").format(new Date()) + ".mp4";
+        File fileOutPath = new File(directory);
+        if (!fileOutPath.exists()) {
+            fileOutPath.mkdirs();
+        }
+        fileOutPath = new File(directory, fileName);
+        Uri uri = Uri.fromFile(fileOutPath);
+        intent.putExtra(MediaStore.EXTRA_OUTPUT, uri);
+        intent.putExtra(MediaStore.EXTRA_VIDEO_QUALITY, 0);
+        startActivityForResult(intent, REQUEST_CODE_TAKE_VIDEO);
     }
 
     @Override

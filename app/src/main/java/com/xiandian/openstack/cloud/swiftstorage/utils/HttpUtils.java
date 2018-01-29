@@ -11,6 +11,7 @@ import com.xiandian.openstack.cloud.swiftstorage.AppState;
 import com.xiandian.openstack.cloud.swiftstorage.LoginActivity;
 import com.xiandian.openstack.cloud.swiftstorage.R;
 import com.xiandian.openstack.cloud.swiftstorage.base.TaskResult;
+import com.xiandian.openstack.cloud.swiftstorage.fragment.SFileData;
 import com.xiandian.openstack.cloud.swiftstorage.sdk.service.OpenStackClientService;
 
 import java.io.BufferedInputStream;
@@ -30,7 +31,7 @@ public class HttpUtils {
      * @param fileListViewAdapter
      * @param activity
      */
-    public static void downloadFromSwfit(final String fileName, final String filePath, final BaseAdapter fileListViewAdapter, final Activity activity) {
+    public static void downloadFromSwfit(final String fileName, final String filePath, final BaseAdapter fileListViewAdapter, final Activity activity, final SFileData fileData) {
         new AsyncTask<String, Object, TaskResult<java.lang.Object>>() {
 
             @Override
@@ -59,7 +60,10 @@ public class HttpUtils {
             @Override
             protected void onPostExecute(TaskResult<java.lang.Object> result) {
                 if (result.isValid()) {
-                    fileListViewAdapter.notifyDataSetChanged();
+                    if (fileData!= null) {
+                        fileData.setImage(new FileIconHelper(activity).getImageThumbnail(filePath));
+                        fileListViewAdapter.notifyDataSetChanged();
+                    }
 
                 } else {
                     //提示错误，返回登录

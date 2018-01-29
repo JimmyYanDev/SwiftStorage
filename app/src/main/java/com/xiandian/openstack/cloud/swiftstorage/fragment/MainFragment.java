@@ -5,6 +5,7 @@ import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.graphics.Bitmap;
+import android.media.MediaRecorder;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
@@ -19,11 +20,13 @@ import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.webkit.MimeTypeMap;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.ListView;
 import android.widget.ProgressBar;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import com.woorea.openstack.swift.model.Object;
@@ -32,7 +35,9 @@ import com.xiandian.openstack.cloud.swiftstorage.AppState;
 import com.xiandian.openstack.cloud.swiftstorage.LoginActivity;
 import com.xiandian.openstack.cloud.swiftstorage.MainActivity;
 import com.xiandian.openstack.cloud.swiftstorage.R;
+import com.xiandian.openstack.cloud.swiftstorage.TestActivity;
 import com.xiandian.openstack.cloud.swiftstorage.base.TaskResult;
+import com.xiandian.openstack.cloud.swiftstorage.fs.OSSFileSystem;
 import com.xiandian.openstack.cloud.swiftstorage.fs.SFile;
 import com.xiandian.openstack.cloud.swiftstorage.sdk.service.OpenStackClientService;
 import com.xiandian.openstack.cloud.swiftstorage.utils.FileIconHelper;
@@ -40,6 +45,7 @@ import com.xiandian.openstack.cloud.swiftstorage.utils.HttpUtils;
 import com.xiandian.openstack.cloud.swiftstorage.utils.PromptDialogUtil;
 
 import java.io.File;
+import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
@@ -400,13 +406,13 @@ public class MainFragment extends Fragment
                 if (file.getContentType().contains("image")) {
                     String fileName = file.getName();
                     // 异步下载图片到本地
-                    HttpUtils.downloadFromSwfit(fileName, filePath, fileListViewAdapter, getActivity());
-                    Bitmap bitmap = fileIconHelper.getImageThumbnail(filePath);
-                    if (bitmap != null) {
-                        fileData.setImage(bitmap);
-                    } else {
+                    HttpUtils.downloadFromSwfit(fileName, filePath, fileListViewAdapter, getActivity(), fileData);
+//                    Bitmap bitmap = fileIconHelper.getImageThumbnail(filePath);
+//                    if (bitmap != null) {
+//                        fileData.setImage(bitmap);
+//                    } else {
                         fileData.setImageResource(R.drawable.ic_file_pic);
-                    }
+//                    }
 
                 } else if (file.getContentType().contains("video")) {
 //                    String fileName = file.getName();
@@ -472,6 +478,13 @@ public class MainFragment extends Fragment
             getAppState().setSelectedDirectory(swiftFolders.get(position));
             fillListView();
         } else {
+            String fileName = item.getFileName();
+            String filePath = getAppState().getOpenStackLocalPath() + fileName;
+            String ext  = fileName.substring(fileName.indexOf(".") + 1).toLowerCase();
+            String mimeType = MimeTypeMap.getSingleton().getMimeTypeFromExtension(ext);
+            Intent intent = new Intent(Intent.ACTION_VIEW);
+            intent.setDataAndType(Uri.fromFile(new File(filePath)), mimeType);
+            startActivity(intent);
         }
     }
 
@@ -548,12 +561,30 @@ public class MainFragment extends Fragment
 
     @Override
     public void search(String fileName) {
-
+        Log.d(TAG, "search: " + fileName);
+        SFile root = getAppState().getSelectedDirectory();
+        List<SFileData> temp = new ArrayList<>();
+        for (int i = 0; i < fileListData.size(); i++) {
+            SFileData sFileData = fileListData.get(i);
+            if (sFileData.getFileName().contains(fileName)) {
+                temp.add(sFileData);
+            }
+        }
+        fileListData.clear();
+        fileListData.addAll(temp);
+        fileListViewAdapter.notifyDataSetChanged();
     }
 
     @Override
     public void share() {
-
+        SFile sFile = getFirstSelectedFile();
+        String fileName = cleanName(sFile.getName());
+        String filePath = getAppState().getOpenStackLocalPath() + fileName;
+        String ext  = fileName.substring(fileName.indexOf(".") + 1).toLowerCase();
+        String mimeType = MimeTypeMap.getSingleton().getMimeTypeFromExtension(ext);
+        Intent intent = new Intent(Intent.ACTION_SEND);
+        intent.setDataAndType(Uri.fromFile(new File(filePath)), mimeType);
+        startActivity(intent);
     }
 
     @Override
@@ -640,7 +671,7 @@ public class MainFragment extends Fragment
                     try {
                         String fileName = sFile.getName();
                         String filePath = getAppState().getOpenStackLocalPath() + cleanName(fileName);
-                        HttpUtils.downloadFromSwfit(fileName, filePath, fileListViewAdapter, getActivity());
+                        HttpUtils.downloadFromSwfit(fileName, filePath, fileListViewAdapter, getActivity(), null);
                         getActivity().runOnUiThread(new Runnable() {
                             @Override
                             public void run() {
@@ -701,17 +732,79 @@ public class MainFragment extends Fragment
 
     @Override
     public void recordaudio() {
-        Intent intent = new Intent(MediaStore.Audio.Media.RECORD_SOUND_ACTION);
-        String directory = getAppState().getOpenStackLocalPath();
+        final MediaRecorder mediaRecorder = new MediaRecorder();
+        String directory = Environment.getExternalStorageDirectory().getAbsolutePath() + "/openstack/";
         String fileName = new SimpleDateFormat("yyyyMMddHHmmss").format(new Date()) + ".mp3";
-        File fileOutPath = new File(directory);
-        if (!fileOutPath.exists()) {
-            fileOutPath.mkdirs();
+        final String outPutFilePath = directory + fileName;
+        File path = new File(directory);
+        if (!path.exists()) {
+            path.mkdirs();
         }
-        fileOutPath = new File(directory, fileName);
-        Uri uri = Uri.fromFile(fileOutPath);
-        intent.putExtra(MediaStore.EXTRA_OUTPUT, uri);
-        startActivityForResult(intent, RESULT_CAPTURE_RECORDER_SOUND);
+        mediaRecorder.setAudioSource(MediaRecorder.AudioSource.MIC);
+        mediaRecorder.setOutputFormat(MediaRecorder.OutputFormat.DEFAULT);
+        mediaRecorder.setAudioEncoder(MediaRecorder.AudioEncoder.DEFAULT);
+        mediaRecorder.setOutputFile(outPutFilePath);
+        final Context context = getActivity();
+        LayoutInflater layoutInflater = getActivity().getLayoutInflater();
+        View view = layoutInflater.inflate(R.layout.dialog_recorder_item, null);
+        android.app.AlertDialog.Builder builder = new android.app.AlertDialog.Builder(context);
+
+        builder.setTitle("录音并上传");
+        builder.setCancelable(false);
+        builder.setView(view);
+        final android.app.AlertDialog alertDialog = builder.create();
+        alertDialog.show();
+        final TextView progress = (TextView) view.findViewById(R.id.progrees);
+        Button btnStart = (Button) view.findViewById(R.id.btnStart);
+        btnStart.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                try {
+                    mediaRecorder.prepare();
+                    mediaRecorder.start();
+                    progress.setVisibility(View.VISIBLE);
+                    v.setVisibility(View.GONE);
+                    Toast.makeText(context, "开始录音", Toast.LENGTH_SHORT).show();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+        });
+        Button btnStop = (Button) view.findViewById(R.id.btnStop);
+        btnStop.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                try {
+                    v.setVisibility(View.GONE);
+                    progress.setVisibility(View.GONE);
+                    mediaRecorder.stop();
+                    mediaRecorder.release();
+                    Toast.makeText(context, "停止录音", Toast.LENGTH_SHORT).show();
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
+        });
+        Button btnUpload = (Button) view.findViewById(R.id.btnUpload);
+        btnUpload.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Toast.makeText(context, "上传录音", Toast.LENGTH_SHORT).show();
+                alertDialog.dismiss();
+            }
+        });
+        Button btnCancel = (Button) view.findViewById(R.id.btnCancel);
+        btnCancel.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                File file = new File(outPutFilePath);
+                if (file.exists()) {
+                    file.delete();
+                }
+                alertDialog.dismiss();
+                Toast.makeText(context, "取消上传", Toast.LENGTH_SHORT).show();
+            }
+        });
     }
 
     @Override
@@ -752,7 +845,6 @@ public class MainFragment extends Fragment
                         String fileName = sFile.getName();
                         String fileType = sFile.getContentType();
                         getService().recycle(getAppState().getSelectedContainer().getName(), fileName, fileType);
-                        HttpUtils.downloadFromSwfit(fileName, fileName, fileListViewAdapter, getActivity());
                         getActivity().runOnUiThread(new Runnable() {
                             @Override
                             public void run() {

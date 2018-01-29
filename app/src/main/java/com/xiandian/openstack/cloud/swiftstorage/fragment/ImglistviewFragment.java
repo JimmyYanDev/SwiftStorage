@@ -207,7 +207,7 @@ public class ImglistviewFragment extends ImgFragment {
                 SFileData fileData = new SFileData();
                 final String filePath = getAppState().getOpenStackLocalPath() + cleanName(fileName);
                 // 异步下载图片到本地
-                HttpUtils.downloadFromSwfit(fileName, filePath, fileListViewAdapter, getActivity());
+                HttpUtils.downloadFromSwfit(fileName, filePath, fileListViewAdapter, getActivity(),fileData);
 
                 Log.d(TAG, "filepath: " + filePath);
                 Log.d(TAG, "filename: " + fileName);
